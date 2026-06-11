@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Test</title>
+</head>
+<body>
+    <h1>Simple Test</h1>
+    <div id="output">Loading...</div>
+
+    <script>
+        document.getElementById('output').textContent = 'Script executed!';
+        console.log('Script tag working');
+    </script>
+
+    <script src="js/topology_data.js"></script>
+    <script>
+        document.getElementById('output').textContent = 'topology_data.js loaded: ' + (typeof generateTopology);
+        console.log('topology_data.js loaded, generateTopology:', typeof generateTopology);
+    </script>
+</body>
+</html>

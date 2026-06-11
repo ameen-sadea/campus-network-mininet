@@ -1,0 +1,388 @@
+/* Campus Network Simulator - Styles */
+
+:root {
+    --core-color: #007bff;
+    --agg-color: #6f42c1;
+    --access-color: #6c757d;
+    --host-color: #28a745;
+    --server-color: #fd7e14;
+    --secure-color: #dc3545;
+    --drop-color: #dc3545;
+    --allow-color: #198754;
+}
+
+body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+    min-height: 100vh;
+}
+
+.navbar-brand {
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+/* Cards with better shadows and rounded corners */
+.card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: none;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-weight: 600;
+    padding: 12px 16px;
+}
+
+.card-body {
+    padding: 16px;
+}
+
+/* Tree View */
+.treeview {
+    padding: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-size: 0.9rem;
+}
+
+.tree-node {
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.tree-node:hover {
+    background-color: #e8f4ff;
+}
+
+.tree-toggle {
+    cursor: pointer;
+    padding: 0 8px;
+    user-select: none;
+    color: #666;
+}
+
+.tree-content {
+    margin-left: 20px;
+    display: none;
+}
+
+.tree-content.expanded {
+    display: block;
+}
+
+.tree-label {
+    font-weight: 500;
+}
+
+.tree-label.core { color: var(--core-color); }
+.tree-label.agg { color: var(--agg-color); }
+.tree-label.access { color: var(--access-color); }
+.tree-label.host { color: var(--host-color); }
+.tree-label.server { color: var(--server-color); }
+
+.tree-label.secure {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    border: 1px solid #ef9a9a;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #c62828;
+}
+
+/* Topology SVG */
+#topologySvg {
+    width: 100%;
+    height: 500px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e0e4e8;
+}
+
+.node {
+    cursor: pointer;
+}
+
+.node circle {
+    stroke-width: 2px;
+    transition: all 0.3s ease;
+}
+
+.node:hover circle {
+    transform: scale(1.1);
+    transform-origin: center;
+}
+
+.node text {
+    font-size: 11px;
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    pointer-events: none;
+}
+
+.link {
+    stroke: #b0bec5;
+    stroke-width: 2px;
+    fill: none;
+    transition: stroke 0.3s, stroke-width 0.3s;
+}
+
+.link.trunk {
+    stroke-dasharray: 8, 4;
+}
+
+.link.active {
+    stroke: #28a745;
+    stroke-width: 4px;
+    filter: drop-shadow(0 0 4px rgba(40, 167, 69, 0.5));
+}
+
+.link.blocked {
+    stroke: #dc3545;
+    stroke-width: 4px;
+    filter: drop-shadow(0 0 4px rgba(220, 53, 69, 0.5));
+}
+
+.link.acl {
+    stroke: #ffc107;
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 4px rgba(255, 193, 7, 0.5));
+}
+
+/* Legend */
+.legend-box {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.legend-box.core { background: linear-gradient(135deg, #4dabf7, #007bff); }
+.legend-box.agg { background: linear-gradient(135deg, #b197fc, #6f42c1); }
+.legend-box.access { background: linear-gradient(135deg, #adb5bd, #6c757d); }
+.legend-box.host { background: linear-gradient(135deg, #51cf66, #28a745); }
+.legend-box.server { background: linear-gradient(135deg, #ffa94d, #fd7e14); }
+
+/* Results Panel */
+#testResults {
+    font-family: 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    background: linear-gradient(180deg, #1e1e1e 0%, #252526 100%);
+    color: #d4d4d4;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #3c3c3c;
+}
+
+/* ACL Rules - Improved styling */
+#aclRules .list-group-item {
+    border-left: 4px solid transparent;
+    transition: all 0.2s;
+    padding: 10px 16px;
+}
+
+#aclRules .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* DROP style - Red background */
+#aclRules .acl-drop {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-left-color: #dc3545;
+    border: none;
+    margin: 4px 0;
+    border-radius: 6px;
+}
+
+#aclRules .acl-drop .acl-action {
+    background: #dc3545;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* ALLOW style - Green background */
+#aclRules .acl-allow {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-left-color: #28a745;
+    border: none;
+    margin: 4px 0;
+    border-radius: 6px;
+}
+
+#aclRules .acl-allow .acl-action {
+    background: #28a745;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+#aclRules .acl-direction {
+    font-weight: 500;
+    color: #495057;
+}
+
+#aclRules .acl-direction .src, #aclRules .acl-direction .dst {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin: 0 2px;
+}
+
+#aclRules .acl-direction .src {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+#aclRules .acl-direction .dst {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+#aclRules .acl-arrow {
+    color: #999;
+    margin: 0 8px;
+}
+
+/* VLAN Tag Colors */
+.vlan-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin: 2px;
+    font-weight: 500;
+}
+
+.vlan-tag.mgmt { background: #e3f2fd; color: #1565c0; }
+.vlan-tag.dormA { background: #f3e5f5; color: #7b1fa2; }
+.vlan-tag.dormB { background: #e8f5e9; color: #2e7d32; }
+.vlan-tag.dormC { background: #fff3e0; color: #ef6c00; }
+.vlan-tag.canteen { background: #fce4ec; color: #c2185b; }
+.vlan-tag.office { background: #e8eaf6; color: #303f9f; }
+.vlan-tag.lab { background: #e0f7fa; color: #00838f; }
+.vlan-tag.library { background: #f1f8e9; color: #558b2f; }
+.vlan-tag.academic { background: #fff8e1; color: #f9a825; }
+.vlan-tag.hr { background: #ffebee; color: #c62828; }
+.vlan-tag.finance { background: #f3e5f5; color: #ad1457; }
+.vlan-tag.logistics { background: #e0f2f1; color: #00695c; }
+.vlan-tag.wifiOfc { background: #e1f5fe; color: #0277bd; }
+.vlan-tag.wifiGst { background: #fff9c4; color: #fbc02d; }
+.vlan-tag.server { background: #ffccbc; color: #d84315; }
+.vlan-tag.dmz { background: #d7ccc8; color: #5d4037; }
+
+/* Node Tooltip - Modern style */
+.node-tooltip {
+    position: absolute;
+    background: linear-gradient(180deg, rgba(30,30,30,0.95) 0%, rgba(20,20,20,0.98) 100%);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 280px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(4px);
+}
+
+.node-tooltip .title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.node-tooltip .detail {
+    font-size: 0.8rem;
+    color: #ccc;
+    margin: 4px 0;
+    line-height: 1.4;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Form controls */
+.form-select, .form-control {
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-select:focus, .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
+}
+
+/* Badge */
+.badge {
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+/* Loading Spinner */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .col-md-3, .col-md-9 {
+        width: 100%;
+    }
+
+    #topologySvg {
+        height: 350px;
+    }
+}
+
+/* Network status badge pulse */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(40, 167, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+.badge.bg-success {
+    animation: pulse 2s infinite;
+}

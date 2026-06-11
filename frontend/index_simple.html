@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园网络模拟器</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { display: flex; gap: 20px; }
+        .left-panel { width: 300px; }
+        .right-panel { flex: 1; }
+        .card { border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+        .tree-node { padding: 5px 0; cursor: pointer; }
+        .tree-node:hover { background: #f0f0f0; }
+        .tree-children { margin-left: 20px; display: none; }
+        .tree-node.expanded + .tree-children { display: block; }
+        select, button { padding: 8px; margin: 5px 0; width: 100%; }
+        button { cursor: pointer; }
+        pre { background: #333; color: #0f0; padding: 10px; border-radius: 5px; }
+        #debug { background: #eee; padding: 10px; margin-bottom: 10px; font-size: 12px; }
+        .node { padding: 5px; margin: 2px; border-radius: 3px; display: inline-block; }
+        .core { background: #007bff; color: white; }
+        .agg { background: #6f42c1; color: white; }
+        .access { background: #6c757d; color: white; }
+        .host { background: #28a745; color: white; }
+        .server { background: #fd7e14; color: white; }
+        .secure { border: 2px solid red; }
+    </style>
+</head>
+<body>
+    <h1>🏫 校园网络模拟器 v2.3</h1>
+
+    <div id="debug">调试信息加载中...</div>
+
+    <div class="container">
+        <div class="left-panel">
+            <div class="card">
+                <h3>🌲 网络结构</h3>
+                <button onclick="location.reload()">🔄 刷新</button>
+                <div id="treeView"></div>
+            </div>
+
+            <div class="card">
+                <h3>🔧 控制面板</h3>
+                <label>源主机:</label>
+                <select id="pingSrc"><option value="">选择源主机</option></select>
+                <label>目标主机:</label>
+                <select id="pingDst"><option value="">选择目标主机</option></select>
+                <button onclick="testPing()">📡 测试 Ping</button>
+                <button onclick="showACL()">🛡️ 显示 ACL</button>
+                <button onclick="clearStatus()">🧹 清除状态</button>
+            </div>
+
+            <div class="card">
+                <h3>📋 ACL 规则</h3>
+                <div id="aclRules"></div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="card">
+                <h3>📊 网络拓扑</h3>
+                <div id="topologyContainer"></div>
+            </div>
+
+            <div class="card">
+                <h3>📝 测试结果</h3>
+                <pre id="testResults">选择源和目标主机，然后点击"测试 Ping"</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/topology_data.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        // 显示调试信息
+        function showDebug(msg) {
+            console.log(msg);
+            document.getElementById('debug').textContent = msg;
+        }
+
+        showDebug('Scripts loaded. D3: ' + (typeof d3 !== 'undefined' ? 'OK' : 'NOT LOADED'));
+
+        // 初始化
+        async function init() {
+            try {
+                showDebug('Loading topology...');
+                const data = await api.getTopology();
+                showDebug('Topology loaded: ' + data.nodes.length + ' nodes, ' + data.links.length + ' links');
+
+                // 渲染树状视图
+                renderTreeView(data);
+
+                // 渲染拓扑
+                renderTopology(data);
+
+                // 填充主机下拉框
+                populateHostSelect(data);
+
+                // 加载 ACL 规则
+                loadACL();
+
+            } catch (e) {
+                showDebug('ERROR: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        // 渲染树状视图
+        function renderTreeView(data) {
+            const container = document.getElementById('treeView');
+            let html = '';
+
+            // 核心层
+            html += '<div class="tree-node expanded" onclick="this.classList.toggle(\'expanded\')">📍 核心层 (cs1)</div>';
+
+            // 汇聚层
+            html += '<div class="tree-node expanded" onclick="this.classList.toggle(\'expanded\')">🔗 汇聚层';
+            html += '<div class="tree-children">';
+            data.nodes.filter(n => n.type === 'switch' && n.subtype === 'agg').forEach(n => {
+                html += '<div class="tree-node"> ' + n.id + ' (' + n.vlans.length + ' VLANs)</div>';
+            });
+            html += '</div></div>';
+
+            // 接入层
+            html += '<div class="tree-node expanded" onclick="this.classList.toggle(\'expanded\')">🔌 接入层';
+            html += '<div class="tree-children">';
+            data.nodes.filter(n => n.type === 'switch' && n.subtype === 'access').forEach(n => {
+                html += '<div class="tree-node"> ' + n.id + ' (VLAN ' + (n.vlans ? n.vlans[0] : '') + ')</div>';
+            });
+            html += '</div></div>';
+
+            // 主机层
+            html += '<div class="tree-node expanded" onclick="this.classList.toggle(\'expanded\')">💻 主机';
+            html += '<div class="tree-children">';
+            data.nodes.filter(n => n.type === 'host' || n.type === 'server').forEach(n => {
+                const cls = n.type === 'server' ? 'server' : 'host';
+                html += '<div class="tree-node"> <span class="node ' + cls + '">' + n.id + '</span> ' + n.ip + '</div>';
+            });
+            html += '</div></div>';
+
+            container.innerHTML = html;
+        }
+
+        // 渲染拓扑 (简化版)
+        function renderTopology(data) {
+            const container = document.getElementById('topologyContainer');
+
+            // 按层分组
+            const core = data.nodes.filter(n => n.type === 'switch' && n.subtype === 'core');
+            const agg = data.nodes.filter(n => n.type === 'switch' && n.subtype === 'agg');
+            const access = data.nodes.filter(n => n.type === 'switch' && n.subtype === 'access');
+            const hosts = data.nodes.filter(n => n.type === 'host' || n.type === 'server');
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
+
+            // 核心层
+            html += '<div style="text-align: center;">';
+            core.forEach(n => {
+                html += '<span class="node core" style="padding:10px;margin:5px;">' + n.id + '</span>';
+            });
+            html += '</div>';
+
+            // 连接线
+            html += '<div style="text-align: center;">' + '│'.repeat(30) + '</div>';
+
+            // 汇聚层
+            html += '<div style="text-align: center;">';
+            agg.forEach(n => {
+                html += '<span class="node agg" style="padding:8px;margin:5px;">' + n.id + '</span>';
+            });
+            html += '</div>';
+
+            // 连接线
+            html += '<div style="text-align: center;">' + '│'.repeat(20) + '</div>';
+
+            // 接入层 (分三组)
+            const accessByAgg = {
+                'as1': access.filter((_, i) => i < 7),
+                'as2': access.filter((_, i) => i >= 7 && i < 13),
+                'as3': access.filter((_, i) => i >= 13)
+            };
+
+            html += '<div style="display: flex; justify-content: space-around;">';
+            for (const [aggId, accs] of Object.entries(accessByAgg)) {
+                html += '<div style="text-align: center;">';
+                html += '<div style="font-size:12px;color:#888;">' + aggId + '</div>';
+                accs.forEach(n => {
+                    html += '<span class="node access" style="padding:5px;margin:2px;font-size:12px;">' + n.id + '</span>';
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+
+            // 主机
+            html += '<div style="text-align: center; margin-top: 20px;">';
+            html += '<div style="font-size:12px;color:#888;">主机</div>';
+            hosts.slice(0, 8).forEach(n => {
+                const cls = n.type === 'server' ? 'server' : 'host';
+                html += '<span class="node ' + cls + '" style="padding:3px;margin:2px;font-size:11px;">' + n.id + '</span>';
+            });
+            html += '</div>';
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // 填充主机下拉框
+        function populateHostSelect(data) {
+            const hosts = data.nodes.filter(n => n.type === 'host' || n.type === 'server');
+            const srcSelect = document.getElementById('pingSrc');
+            const dstSelect = document.getElementById('pingDst');
+
+            hosts.forEach(h => {
+                srcSelect.innerHTML += '<option value="' + h.id + '">' + h.id + ' (' + h.ip + ')</option>';
+                dstSelect.innerHTML += '<option value="' + h.id + '">' + h.id + ' (' + h.ip + ')</option>';
+            });
+        }
+
+        // 测试 Ping
+        function testPing() {
+            const src = document.getElementById('pingSrc').value;
+            const dst = document.getElementById('pingDst').value;
+            const results = document.getElementById('testResults');
+
+            if (!src || !dst) {
+                results.textContent = '请先选择源和目标主机！';
+                return;
+            }
+
+            results.textContent = '正在测试: ' + src + ' -> ' + dst + '...\n';
+
+            api.ping(src, dst).then(result => {
+                if (result.success) {
+                    results.textContent = '✓ ' + src + ' -> ' + dst + ': 成功\n' +
+                        'RTT: ' + (result.rtt ? result.rtt.avg : '?') + ' ms\n\n' +
+                        result.output;
+                } else {
+                    results.textContent = '✗ ' + src + ' -> ' + dst + ': 失败\n' +
+                        '原因: ' + (result.error || '超时') + '\n\n' +
+                        result.output;
+                }
+            });
+        }
+
+        // 显示 ACL
+        function showACL() {
+            document.getElementById('testResults').textContent =
+                'ACL 规则:\n' +
+                '1. 宿舍 (10,11) -> 人事处 (50): DROP\n' +
+                '2. 宿舍 (10,11) -> 财务处 (60): DROP\n' +
+                '3. 访客 (90) -> 内网: DROP\n' +
+                '4. 宿舍 (10,11) -> 服务器 (100): ALLOW';
+        }
+
+        // 清除状态
+        function clearStatus() {
+            document.getElementById('testResults').textContent = '状态已清除';
+        }
+
+        // 加载 ACL 规则列表
+        function loadACL() {
+            const container = document.getElementById('aclRules');
+            const rules = [
+                { src: '宿舍A/B', dst: '人事处', action: 'DROP' },
+                { src: '宿舍A/B', dst: '财务处', action: 'DROP' },
+                { src: '访客', dst: '内网', action: 'DROP' },
+                { src: '宿舍', dst: '服务器', action: 'ALLOW' },
+            ];
+
+            rules.forEach(r => {
+                container.innerHTML += '<div style="padding:3px;border-bottom:1px solid #eee;">' +
+                    r.src + ' → ' + r.dst + ': <span style="color:' +
+                    (r.action === 'DROP' ? 'red' : 'green') + ';">' + r.action + '</span></div>';
+            });
+        }
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>

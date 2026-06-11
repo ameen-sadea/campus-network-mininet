@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校园网络模拟器 v3.4</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+    <!-- Header -->
+    <header class="bg-white shadow-md border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-md">
+                    <i class="fas fa-network-wired text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">校园网络模拟器</h1>
+                    <p class="text-xs text-gray-500">Campus Network Simulator v3.4</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="networkStatus" class="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 border border-gray-200">
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                    <span class="text-sm text-gray-600">离线</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-[1800px] mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left Panel -->
+            <div class="lg:col-span-3 space-y-4">
+                <!-- Network Structure -->
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                        <span class="font-semibold flex items-center gap-2">
+                            <i class="fas fa-sitemap text-blue-600"></i> 网络结构
+                        </span>
+                        <button onclick="refreshTopology()" class="p-2 hover:bg-gray-100 rounded-lg transition">
+                            <i class="fas fa-sync-alt text-gray-500"></i>
+                        </button>
+                    </div>
+                    <div id="treeView" class="p-4 max-h-80 overflow-y-auto"></div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200">
+                        <span class="font-semibold flex items-center gap-2">
+                            <i class="fas fa-terminal text-green-600"></i> 控制面板
+                        </span>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-500 mb-2">
+                                源主机
+                                <span class="text-green-600 font-medium">(Ping / HTTP / FTP 均从此发起)</span>
+                            </label>
+                            <select id="pingSrc" class="w-full bg-white border-2 border-green-500 rounded-xl px-4 py-2.5 text-gray-700 focus:border-green-600 focus:ring-2 focus:ring-green-200 focus:outline-none shadow-sm">
+                                <option value="">选择源主机</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select id="pingDst" class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-gray-700 focus:border-blue-500 focus:outline-none">
+                                <option value="">选择目标主机</option>
+                            </select>
+                        </div>
+                        <button onclick="testPing()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-md">
+                            <i class="fas fa-broadcast"></i> 测试 Ping
+                        </button>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="testHTTP()" class="bg-orange-600 hover:bg-orange-500 text-white py-2 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md">
+                                <i class="fas fa-globe"></i> HTTP
+                            </button>
+                            <button onclick="testFTP()" class="bg-teal-600 hover:bg-teal-500 text-white py-2 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md">
+                                <i class="fas fa-file-download"></i> FTP
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="showACL()" class="bg-amber-500 hover:bg-amber-400 text-white py-2 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md">
+                                <i class="fas fa-shield-alt"></i> ACL
+                            </button>
+                            <button onclick="clearStatus()" class="bg-gray-500 hover:bg-gray-400 text-white py-2 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md">
+                                <i class="fas fa-eraser"></i> 清除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACL Rules -->
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200">
+                        <span class="font-semibold flex items-center gap-2">
+                            <i class="fas fa-fire text-red-500"></i> ACL 防火墙规则
+                        </span>
+                    </div>
+                    <ul id="aclRules" class="p-3 space-y-2 max-h-64 overflow-y-auto"></ul>
+                </div>
+
+                <!-- VPN Status -->
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                        <span class="font-semibold flex items-center gap-2">
+                            <i class="fas fa-lock text-indigo-600"></i> VPN 隧道
+                        </span>
+                        <label class="relative inline-flex items-center cursor-pointer" title="VPN 隧道开关">
+                            <input type="checkbox" id="vpnToggle" class="sr-only peer" onchange="toggleVPN(this.checked)">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:bg-indigo-600 transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition peer-checked:after:translate-x-5"></div>
+                        </label>
+                    </div>
+                    <div id="vpnStatus" class="p-4 text-sm text-gray-600 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                            <span>加载中...</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Panel -->
+            <div class="lg:col-span-9 space-y-4">
+                <!-- Topology -->
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                        <span class="font-semibold flex items-center gap-2">
+                            <i class="fas fa-project-diagram text-blue-600"></i> 网络拓扑
+                        </span>
+                        <div class="flex items-center gap-4 text-xs text-gray-600">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> 核心</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-purple-500"></span> 汇聚</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-500"></span> 接入</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> 主机</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-orange-500"></span> 服务器</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-cyan-500"></span> 校区专线</span>
+                            <span class="flex items-center gap-1"><span class="w-5 h-0 border-t-2 border-dashed border-sky-400"></span> 核心直连</span>
+                            <span class="flex items-center gap-1"><span class="w-5 h-0 border-t-2 border-slate-400"></span> DMZ安全流</span>
+                        </div>
+                    </div>
+                    <div class="p-4 relative" id="topologyContainer">
+                        <svg id="topologySvg" class="w-full" style="height: 660px;"></svg>
+                        <div class="absolute bottom-2 left-2 flex gap-2 z-10">
+                            <button id="btnMainCampus" onclick="switchTopologyPage('main')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white shadow">主校区</button>
+                            <button id="btnCampus2" onclick="switchTopologyPage('campus2')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 shadow">分校区</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network Operations -->
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                        <span class="font-semibold flex items-center gap-2">
+                            <i class="fas fa-chart-line text-emerald-600"></i> 网络运行观测
+                            <span class="text-xs font-normal text-gray-400">链路质量与边界策略</span>
+                        </span>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span id="obsUpdated" class="text-gray-400">等待采样</span>
+                            <button onclick="refreshObservability(true)" class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition">刷新</button>
+                        </div>
+                    </div>
+                    <div id="obsStatus" class="hidden px-4 pt-3 text-sm text-amber-600"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 p-4">
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                            <div class="text-xs font-semibold text-slate-600">跨校区链路质量</div>
+                            <div class="mt-2 flex items-end gap-1">
+                                <span id="obsRtt" class="text-2xl font-bold text-slate-900">--</span>
+                                <span class="text-xs text-slate-500 mb-1">ms RTT</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-600">
+                                丢包 <span id="obsLoss">--</span>% · 抖动 <span id="obsJitter">--</span> ms
+                            </div>
+                            <svg id="obsRttSpark" class="mt-2 w-full h-8" viewBox="0 0 160 32"></svg>
+                            <div class="mt-1 text-[10px] text-slate-500">探测路径：分校区终端 → 主校区办公网</div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                            <div class="text-xs font-semibold text-slate-600">跨校区接口吞吐</div>
+                            <div class="mt-2 text-sm text-slate-900">
+                                RX <span id="obsRx" class="font-bold">--</span> Mbps
+                                <span class="mx-1 text-slate-300">/</span>
+                                TX <span id="obsTx" class="font-bold">--</span> Mbps
+                            </div>
+                            <svg id="obsTrafficSpark" class="mt-2 w-full h-8" viewBox="0 0 160 32"></svg>
+                            <div id="obsCounters" class="mt-1 text-[10px] text-slate-500">等待接口计数样本</div>
+                            <div id="obsTcMode" class="mt-1 text-[10px] font-medium text-slate-600">链路队列：--</div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                            <div class="text-xs font-semibold text-slate-600">DMZ 发布与隔离</div>
+                            <div class="mt-2 text-xs text-slate-800">
+                                公网 → 校园门户：
+                                <span id="obsDmzExternal" class="font-bold">--</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-800">
+                                公网 → 内网 Web：
+                                <span id="obsDmzInternal" class="font-bold">--</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-800">
+                                保密区 → 白名单门户：
+                                <span id="obsDmzWhitelist" class="font-bold">--</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-800">
+                                VPN 隧道：
+                                <span id="obsVpn" class="font-bold">--</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                            <div class="text-xs font-semibold text-slate-600">边界策略命中</div>
+                            <div class="mt-2 text-xs text-slate-800">
+                                有状态防火墙：
+                                <span id="obsFirewall" class="font-bold">--</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-800">
+                                ACL 丢弃包：
+                                <span id="obsAclDrops" class="font-bold">--</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-800">
+                                ACL 处理包：
+                                <span id="obsAclTotal" class="font-bold">--</span>
+                            </div>
+                            <div class="mt-2 text-[10px] text-slate-500">累计计数，自网络启动后持续增长</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200">
+                        <span class="font-semibold flex items-center gap-2">
+                            <i class="fas fa-clipboard-list text-blue-600"></i> 测试结果
+                        </span>
+                    </div>
+                    <div class="p-4">
+                        <pre id="testResults" class="font-mono text-sm bg-gray-800 text-green-400 rounded-xl p-4 h-48 overflow-auto"></pre>
+                    </div>
+                </div>
+
+                <!-- API Log -->
+                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                        <span class="font-semibold flex items-center gap-2">
+                            <i class="fas fa-exchange-alt text-cyan-500"></i> API 联调日志
+                            <span class="text-xs font-normal text-gray-400">前后端实时通信</span>
+                        </span>
+                        <button onclick="clearApiLog()" class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition">清除</button>
+                    </div>
+                    <div class="p-4">
+                        <pre id="apiLogTerminal" class="font-mono text-sm bg-gray-800 text-cyan-300 rounded-xl p-4 h-40 overflow-auto"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/topology_data.js?v=3.4.0"></script>
+    <script src="js/api.js?v=3.4.0"></script>
+    <script src="js/treeview.js?v=3.4.0"></script>
+    <script src="js/topology.js?v=3.4.0"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            initApiLog();
+            await loadTopology();
+            await loadACL();
+            await loadVPN();
+        });
+
+        function appendApiLog(message, type) {
+            const el = document.getElementById('apiLogTerminal');
+            if (!el) return;
+            const time = new Date().toLocaleTimeString();
+            const colors = {
+                success: 'text-green-400',
+                error: 'text-red-400',
+                info: 'text-blue-400',
+                request: 'text-yellow-300',
+                simulate: 'text-purple-300',
+                warn: 'text-orange-300',
+            };
+            el.innerHTML += `<div class="${colors[type] || 'text-cyan-300'}">[${time}] ${message}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function clearApiLog() {
+            const el = document.getElementById('apiLogTerminal');
+            if (el) el.innerHTML = '';
+            appendApiLog('日志已清除', 'info');
+        }
+
+        function initApiLog() {
+            window.appendApiLog = appendApiLog;
+            appendApiLog(`API 基址: ${api.API_BASE}`, 'info');
+            appendApiLog('初始化完成，等待后端探测…', 'info');
+        }
+
+        function updateNetworkStatus() {
+            const el = document.getElementById('networkStatus');
+            if (!api.isBackendProbeDone()) {
+                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span><span class="text-sm text-gray-500">检测中…</span>';
+            } else if (api.isBackendOnline()) {
+                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span><span class="text-sm text-green-600">Mininet 已连接</span>';
+            } else {
+                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span><span class="text-sm text-green-600">演示就绪</span>';
+            }
+        }
+
+        function resultTag(result) {
+            return result && result.source === 'mininet' ? ' [Mininet]' : '';
+        }
+
+        const observabilityHistory = { rtt: [], traffic: [] };
+        let observabilityTimer = null;
+        let observabilityBusy = false;
+
+        function setObsText(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        }
+
+        function renderObsSparkline(id, values, color) {
+            const svg = document.getElementById(id);
+            if (!svg) return;
+            if (!values.length) {
+                svg.innerHTML = '';
+                return;
+            }
+            const max = Math.max(...values, 0.001);
+            const min = Math.min(...values);
+            const spread = Math.max(max - min, max * 0.08, 0.001);
+            const points = values.map((value, index) => {
+                const x = values.length === 1 ? 0 : index * 160 / (values.length - 1);
+                const y = 29 - ((value - min) / spread) * 25;
+                return `${x.toFixed(1)},${Math.max(3, Math.min(29, y)).toFixed(1)}`;
+            }).join(' ');
+            svg.innerHTML = `
+                <line x1="0" y1="29" x2="160" y2="29" stroke="#cbd5e1" stroke-width="1"/>
+                <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round"/>`;
+        }
+
+        function formatProbe(probe) {
+            if (!probe || !probe.success) return '<span class="text-red-600">失败</span>';
+            return `<span class="text-green-700">HTTP ${probe.http_code} · ${probe.latency_ms} ms</span>`;
+        }
+
+        async function refreshObservability(force = false) {
+            if (observabilityBusy) return;
+            observabilityBusy = true;
+            const status = document.getElementById('obsStatus');
+            try {
+                const data = await api.getObservability(force);
+                if (!data.success) {
+                    status.classList.remove('hidden');
+                    status.textContent = data.error || '实时指标不可用';
+                    return;
+                }
+                status.classList.add('hidden');
+
+                const probe = data.intercampus?.probe || {};
+                const link = data.intercampus?.link || {};
+                setObsText('obsRtt', probe.rtt_avg_ms == null ? '--' : probe.rtt_avg_ms.toFixed(2));
+                setObsText('obsLoss', probe.loss_pct == null ? '--' : probe.loss_pct.toFixed(1));
+                setObsText('obsJitter', probe.rtt_jitter_ms == null ? '--' : probe.rtt_jitter_ms.toFixed(2));
+
+                if (probe.rtt_avg_ms != null) {
+                    observabilityHistory.rtt.push(probe.rtt_avg_ms);
+                    observabilityHistory.rtt = observabilityHistory.rtt.slice(-20);
+                    renderObsSparkline('obsRttSpark', observabilityHistory.rtt, '#0891b2');
+                }
+
+                setObsText('obsRx', Number(link.rx_mbps || 0).toFixed(4));
+                setObsText('obsTx', Number(link.tx_mbps || 0).toFixed(4));
+                const liveTraffic = Number(link.rx_mbps || 0) + Number(link.tx_mbps || 0);
+                observabilityHistory.traffic.push(liveTraffic);
+                observabilityHistory.traffic = observabilityHistory.traffic.slice(-20);
+                renderObsSparkline('obsTrafficSpark', observabilityHistory.traffic, '#2563eb');
+                setObsText(
+                    'obsCounters',
+                    link.sample_interval_s == null
+                        ? `接口 ${link.interface || '--'}：等待第二个样本`
+                        : `${link.interface} · ${link.sample_interval_s}s 差分 · RX/TX ${link.rx_packets}/${link.tx_packets} 包`
+                );
+                setObsText(
+                    'obsTcMode',
+                    link.fixed_impairment_configured
+                        ? '链路队列：已配置流量控制'
+                        : '链路队列：系统默认'
+                );
+
+                document.getElementById('obsDmzExternal').innerHTML =
+                    formatProbe(data.dmz?.external_to_portal);
+                document.getElementById('obsDmzInternal').innerHTML =
+                    data.dmz?.external_to_internal?.success
+                        ? '<span class="text-red-600">异常放行</span>'
+                        : '<span class="text-green-700">已阻断</span>';
+                document.getElementById('obsDmzWhitelist').innerHTML =
+                    formatProbe(data.dmz?.whitelist_hr_to_portal);
+                setObsText('obsVpn', data.dmz?.vpn_ready ? 'GRE 已建立' : '不可用');
+                setObsText(
+                    'obsFirewall',
+                    data.security?.edge_firewall?.active
+                        ? `ACTIVE · ${data.security.edge_firewall.drop_packets || 0} drops`
+                        : 'INACTIVE'
+                );
+                setObsText('obsAclDrops', String(data.security?.ovs_drop_packets ?? '--'));
+                setObsText('obsAclTotal', String(data.security?.ovs_acl_packets ?? '--'));
+                setObsText('obsUpdated', `更新 ${new Date(data.measured_at).toLocaleTimeString()}`);
+            } catch (error) {
+                status.classList.remove('hidden');
+                status.textContent = `采样失败：${error.message}`;
+            } finally {
+                observabilityBusy = false;
+            }
+        }
+
+        function startObservability() {
+            if (observabilityTimer) return;
+            refreshObservability(true);
+            observabilityTimer = setInterval(refreshObservability, 8000);
+        }
+
+        async function loadTopology() {
+            try {
+                const data = await api.getTopology();
+                window.topologyFullData = data;
+                renderTreeView(data);
+                renderTopology(data);
+                populateHostSelect(data);
+                updateNetworkStatus();
+                // 后台探测 Mininet，不阻塞页面；未启动 API 时继续用本地模拟
+                api.checkBackend(45, 2000).then(async (data) => {
+                    updateNetworkStatus();
+                    if (data?.online) await api.syncVpnClient();
+                }).then(() => {
+                    updateNetworkStatus();
+                    startObservability();
+                });
+            } catch (error) {
+                console.error('[loadTopology]', error);
+                document.getElementById('networkStatus').innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-sm text-red-600">加载失败</span>';
+            }
+        }
+
+        async function refreshTopology() {
+            await loadTopology();
+            addResult('[刷新] 拓扑已刷新', 'info');
+        }
+
+        function populateHostSelect(data) {
+            const hosts = data.nodes.filter(n => n.type === 'host' || n.type === 'server');
+            const srcSelect = document.getElementById('pingSrc');
+            const dstSelect = document.getElementById('pingDst');
+            [srcSelect, dstSelect].forEach(select => {
+                select.innerHTML = '<option value="">选择主机</option>';
+                hosts.forEach(h => {
+                    const cnName = window.NODE_NAMES_CN ? window.NODE_NAMES_CN[h.id] || h.id : h.id;
+                    select.innerHTML += `<option value="${h.id}">${cnName}</option>`;
+                });
+            });
+        }
+
+        async function testPing() {
+            const src = document.getElementById('pingSrc').value;
+            const dst = document.getElementById('pingDst').value;
+            if (!src || !dst) { alert('请选择源和目标主机'); return; }
+            const srcName = window.NODE_NAMES_CN ? window.NODE_NAMES_CN[src] || src : src;
+            const dstName = window.NODE_NAMES_CN ? window.NODE_NAMES_CN[dst] || dst : dst;
+            addResult(`[Ping] ${srcName} -> ${dstName}`, 'info');
+            try {
+                const result = await api.ping(src, dst);
+                if (result.success) {
+                    addResult(`[成功] ${srcName} -> ${dstName} (RTT: ${result.rtt?.avg || '?'}ms)${resultTag(result)}`, 'success');
+                    highlightPathOnTopology(src, dst, true);
+                } else {
+                    addResult(`[阻断] ${srcName} -> ${dstName}: ${result.error || 'failed'}${resultTag(result)}`, 'error');
+                    highlightPathOnTopology(src, dst, false);
+                }
+            } catch (error) {
+                addResult(`[错误] ${error.message}`, 'error');
+            }
+        }
+
+        async function testHTTP() {
+            const src = document.getElementById('pingSrc').value;
+            if (!src) { alert('请选择源主机'); return; }
+            const selectedDst = document.getElementById('pingDst').value;
+            const dst = ['web', 'dmz_web', 'ext_web'].includes(selectedDst) ? selectedDst : 'web';
+            const srcName = window.NODE_NAMES_CN ? window.NODE_NAMES_CN[src] || src : src;
+            const dstName = window.NODE_NAMES_CN ? window.NODE_NAMES_CN[dst] || dst : dst;
+            addResult(`[HTTP] ${srcName} -> ${dstName}`, 'info');
+            try {
+                const result = await api.httpGet(src, dst);
+                if (result.success) {
+                    addResult(`[HTTP 200] ${srcName} 访问 ${dstName} 成功${resultTag(result)}`, 'success');
+                    highlightPathOnTopology(src, dst, true);
+                } else {
+                    addResult(`[HTTP 失败] ${srcName}: ${result.error || 'blocked'}${resultTag(result)}`, 'error');
+                    highlightPathOnTopology(src, dst, false);
+                }
+            } catch (error) {
+                addResult(`[错误] ${error.message}`, 'error');
+            }
+        }
+
+        async function testFTP() {
+            const src = document.getElementById('pingSrc').value;
+            if (!src) { alert('请选择源主机'); return; }
+            const srcName = window.NODE_NAMES_CN ? window.NODE_NAMES_CN[src] || src : src;
+            addResult(`[FTP] ${srcName} -> FTP服务器`, 'info');
+            try {
+                const result = await api.ftpGet(src, 'ftp');
+                if (result.success) {
+                    addResult(`[FTP OK] ${srcName} 下载 share.txt 成功${resultTag(result)}`, 'success');
+                    highlightPathOnTopology(src, 'ftp', true);
+                } else {
+                    addResult(`[FTP 失败] ${srcName}: ${result.error || 'blocked'}${resultTag(result)}`, 'error');
+                    highlightPathOnTopology(src, 'ftp', false);
+                }
+            } catch (error) {
+                addResult(`[错误] ${error.message}`, 'error');
+            }
+        }
+
+        async function loadVPN() {
+            const box = document.getElementById('vpnStatus');
+            const toggle = document.getElementById('vpnToggle');
+            try {
+                const vpn = await api.getVPNStatus();
+                if (toggle) toggle.checked = vpn.enabled;
+                const color = vpn.enabled ? 'text-green-600' : 'text-gray-500';
+                const dot = vpn.enabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400';
+                box.innerHTML = `
+                    <div class="flex items-center gap-2 ${color}">
+                        <span class="w-2 h-2 rounded-full ${dot}"></span>
+                        <span class="font-medium">${vpn.status}</span>
+                    </div>`;
+            } catch (e) {
+                box.innerHTML = '<span class="text-red-500">VPN 状态加载失败</span>';
+            }
+        }
+
+        async function toggleVPN(enabled) {
+            try {
+                const vpn = await api.setVPNTunnelEnabled(enabled);
+                await loadVPN();
+                addResult(vpn.enabled ? '[VPN] GRE 隧道已连接，准入策略生效' : '[VPN] 隧道已断开，访客保持隔离', vpn.enabled ? 'success' : 'info');
+            } catch (error) {
+                await loadVPN();
+                addResult(`[VPN] 启用失败，已按 fail-closed 保持阻断: ${error.message}`, 'error');
+            }
+        }
+
+        async function showACL() {
+            if (typeof highlightACLOnTopology === 'function') highlightACLOnTopology();
+            addResult('[ACL] 规则已高亮', 'info');
+        }
+
+        function clearStatus() {
+            if (typeof clearTopology === 'function') clearTopology();
+            addResult('[清除] 状态已清除', 'info');
+        }
+
+        function addResult(message, type) {
+            const results = document.getElementById('testResults');
+            const time = new Date().toLocaleTimeString();
+            const colors = { success: 'text-green-400', error: 'text-red-400', info: 'text-blue-400' };
+            results.innerHTML += `<div class="${colors[type] || ''}">[${time}] ${message}</div>`;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function loadACL() {
+            const aclList = document.getElementById('aclRules');
+            const rules = [
+                { src: '访客WiFi', dst: '内网', action: 'BLOCK', blocked: true },
+                { src: '访客-3', dst: '内网', action: 'BLOCK', blocked: true },
+                { src: '访客-3', dst: 'VPN服务器', action: 'ALLOW', blocked: false },
+                { src: '访客-3+VPN', dst: '内网', action: 'ALLOW', blocked: false },
+                { src: '访客-3+VPN', dst: '人事处', action: 'BLOCK', blocked: true },
+                { src: '访客-3+VPN', dst: '财务处', action: 'BLOCK', blocked: true },
+                { src: '宿舍A', dst: '人事处', action: 'BLOCK', blocked: true },
+                { src: '宿舍B', dst: '人事处', action: 'BLOCK', blocked: true },
+                { src: '宿舍A', dst: '财务处', action: 'BLOCK', blocked: true },
+                { src: '宿舍B', dst: '财务处', action: 'BLOCK', blocked: true },
+                { src: '人事处', dst: 'DMZ', action: 'BLOCK', blocked: true },
+                { src: '财务处', dst: 'DMZ', action: 'BLOCK', blocked: true },
+                { src: '人事处', dst: '外网', action: 'BLOCK', blocked: true },
+                { src: '财务处', dst: '外网', action: 'BLOCK', blocked: true },
+                { src: 'DMZ门户', dst: '校园内网', action: 'BLOCK', blocked: true },
+                { src: '宿舍区', dst: '服务器区', action: 'ALLOW', blocked: false },
+                { src: '\u4eba\u4e8b/\u8d22\u52a1', dst: '\u6821\u56ed\u5b98\u7f51', action: 'WHITELIST', blocked: false },
+                { src: '\u4eba\u4e8b/\u8d22\u52a1', dst: '\u5916\u90e8\u7f51\u7ad9', action: 'BLOCK', blocked: true },
+                { src: '\u529e\u516c/\u5bbf\u820d', dst: '\u5916\u90e8\u7f51\u7ad9', action: 'ALLOW', blocked: false },
+            ];
+            aclList.innerHTML = rules.map(rule => `
+                <li class="flex items-center justify-between gap-2 p-2 rounded-lg text-xs ${rule.blocked ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}">
+                    <div class="flex items-center gap-1 min-w-0 flex-nowrap overflow-hidden">
+                        <span class="inline-block whitespace-nowrap px-1.5 py-0.5 rounded ${rule.blocked ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${rule.src}</span>
+                        <i class="fas fa-arrow-right text-gray-400 shrink-0" style="font-size:10px"></i>
+                        <span class="inline-block whitespace-nowrap px-1.5 py-0.5 rounded ${rule.blocked ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${rule.dst}</span>
+                    </div>
+                    <span class="shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full font-bold ${rule.blocked ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}">${rule.action}</span>
+                </li>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

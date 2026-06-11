@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.venv/
+venv/
+
+# Mininet 运行残留
+dA1
+nodes
+
+# OS / 编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 课程 Word 报告（体积大，Git 不便 diff）
+*.docx
