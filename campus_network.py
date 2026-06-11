@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-校园网络模拟器 - Campus Network Simulator v3.4.0
+校园网络模拟器 - Campus Network Simulator v3.5.0
 分校区 cs2 / 访客 VPN（gst3 经 sw16 直连 cs1，vpn_srv 挂 DMZ sw15）
 """
 from mininet.cli import CLI
@@ -344,7 +344,7 @@ class CampusNetwork:
 
     def build(self):
         info("="*60 + "\n")
-        info("  校园网络构建系统 v3.4.0 (Directional Firewall/DMZ/VPN)")
+        info("  校园网络构建系统 v3.5.0 (API + Interactive Mininet CLI)")
         info("="*60 + "\n\n")
 
         self._cleanup_stale()
@@ -731,8 +731,8 @@ class CampusNetwork:
 
         self.vpn_ready = True
 
-    def run_api(self, port=5000):
-        """启动 REST API，供前端调用真实 Ping/HTTP/FTP 测试"""
+    def run_api(self, port=5000, interactive=True):
+        """Start the REST API in a background thread and optionally open Mininet CLI."""
         import time
         from api_server import clear_root_vpn_nat, restore_cs1_guest_block, start_api_server
 
@@ -750,10 +750,18 @@ class CampusNetwork:
         info("  GET /api/observability\n")
         info("  POST /api/vpn-sync (X-Campus-Token)\n")
         info("  前端演示: 另开终端 python -m http.server 8000\n")
-        info("  Ctrl+C 停止\n\n")
+        if interactive:
+            info("\n>> API 正在后台运行，同时开放 Mininet CLI\n")
+            info("  前端操作和 mininet> 命令使用同一套网络实例\n")
+            info("  输入 exit 将同时停止 CLI、API 和 Mininet\n\n")
+        else:
+            info("  Ctrl+C 停止\n\n")
         try:
-            while True:
-                time.sleep(1)
+            if interactive:
+                self.run_cli()
+            else:
+                while True:
+                    time.sleep(1)
         except KeyboardInterrupt:
             info("\n>> 停止 API...\n")
         finally:
@@ -812,7 +820,16 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='校园网络 Mininet 模拟器')
-    parser.add_argument('--api', action='store_true', help='启动 REST API（供前端联调）')
+    parser.add_argument(
+        '--api',
+        action='store_true',
+        help='启动 REST API，并在同一终端开放 Mininet CLI',
+    )
+    parser.add_argument(
+        '--api-only',
+        action='store_true',
+        help='只启动 REST API，不开放交互 CLI',
+    )
     parser.add_argument('--api-port', type=int, default=5000, help='API 端口（默认 5000）')
     args = parser.parse_args()
 
@@ -821,8 +838,8 @@ def main():
     campus = CampusNetwork()
     try:
         campus.build()
-        if args.api:
-            campus.run_api(args.api_port)
+        if args.api or args.api_only:
+            campus.run_api(args.api_port, interactive=not args.api_only)
         else:
             campus.run_cli()
     except KeyboardInterrupt:

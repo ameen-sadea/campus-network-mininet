@@ -31,7 +31,8 @@ if not exist "%FRONTEND%\index.html" (
 
 echo [1/4] WSL OK
 
-echo [2/4] Starting Mininet API (WSL) + frontend HTTP server...
+echo [2/4] Starting Mininet API + interactive CLI (WSL) and frontend HTTP server...
+echo       Use the mininet^> prompt in the MininetAPI window for direct commands.
 echo       sudo password may be required in MininetAPI window.
 start "MininetAPI" cmd /k wsl --cd "%CD%" sudo bash -c "mn -c 2>/dev/null; exec python3 campus_network.py --api"
 start "FrontendHTTP" cmd /k cd /d "%FRONTEND%" ^& python -m http.server 8000
@@ -70,6 +71,7 @@ if defined WSL_IP (
 
 echo.
 echo Done. Keep MininetAPI and FrontendHTTP windows open.
+echo The MininetAPI window supports both frontend requests and mininet^> commands.
 echo Close those windows to stop the demo.
 
 :DONE

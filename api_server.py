@@ -29,7 +29,8 @@ ALLOWED_ORIGINS = {
     'http://localhost:8000',
     'http://127.0.0.1:8000',
 }
-BUILD_VERSION = '3.4.0'
+BUILD_VERSION = '3.5.0'
+API_VERBOSE = os.environ.get('CAMPUS_API_VERBOSE', '').lower() in ('1', 'true', 'yes', 'on')
 
 VPN_CLIENT = 'gst3'
 VPN_CLIENT_GW = '10.0.91.1'
@@ -851,8 +852,9 @@ class CampusNetworkAPI:
 
 
 def api_log(msg):
-    sys.stderr.write(f'[API] {msg}\n')
-    sys.stderr.flush()
+    if API_VERBOSE:
+        sys.stderr.write(f'[API] {msg}\n')
+        sys.stderr.flush()
 
 
 def make_handler(api):
